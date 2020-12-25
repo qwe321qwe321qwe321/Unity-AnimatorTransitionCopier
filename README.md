@@ -17,7 +17,8 @@ It helps you to depart from suffering when you have to change animation states i
 ![](./images/copy_selected_state.gif)
 
 ## Usage
-Import `Assets/Editor` folder into your project.
+1. Import `Assets/Editor` folder into your project.
+2. Open menu: Custom > AnimationTools > Animator Transition Copier.
 
 ## Classes
 * [AnimatorTransitionCopierWindow.cs](./Assets/Editor/AnimatorTransitionCopierWindow.cs) - Main class.
