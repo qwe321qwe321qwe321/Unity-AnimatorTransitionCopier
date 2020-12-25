@@ -1,5 +1,5 @@
 # Unity-AnimatorTransitionCopier
-AnimatorTransitionCopier is a simple tool to copy paste animation transitions in Animator editor.
+AnimatorTransitionCopier is a simple tool to **copy paste animation transitions** in Animator editor.
 
 It helps you to depart from suffering when you have to change animation states in a huge state machine, such as from clip to blend tree.
 
@@ -18,7 +18,10 @@ It helps you to depart from suffering when you have to change animation states i
 
 ## Usage
 1. Import `Assets/Editor` folder into your project.
-2. Open menu: Custom > AnimationTools > Animator Transition Copier.
+2. Open window from menu: Custom > AnimationTools > Animator Transition Copier.
+3. Assign the AnimatorController and AnimatorLayer which you want to mainpulate and enjoy it.
+
+*Notice that the tool window does not refresh immediately, it only refreshs when your mouse is on it.*
 
 ## Classes
 * [AnimatorTransitionCopierWindow.cs](./Assets/Editor/AnimatorTransitionCopierWindow.cs) - Main class.
