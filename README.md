@@ -26,3 +26,6 @@ It helps you to depart from suffering when you have to change animation states i
 ## Classes
 * [AnimatorTransitionCopierWindow.cs](./Assets/Editor/AnimatorTransitionCopierWindow.cs) - Main class.
 * [EditorGUIHelper.cs](./Assets/Editor/EditorGUIHelper.cs) - A part of my helper library. It provides useful EditorGUI and GUILayout extensions.
+
+## Environment
+Unity 2019.4.17f1 LTS
