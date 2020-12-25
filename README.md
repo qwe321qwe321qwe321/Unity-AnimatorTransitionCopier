@@ -15,3 +15,10 @@ It helps you to depart from suffering when you have to change animation states i
 ![](./images/copy_selected_transitions.gif)
 ### Copy all transitions of selected state
 ![](./images/copy_selected_state.gif)
+
+## Usage
+Import `Assets/Editor` folder into your project.
+
+## Classes
+* [AnimatorTransitionCopierWindow.cs](./Assets/Editor/AnimatorTransitionCopierWindow.cs) - Main class.
+* [EditorGUIHelper.cs](./Assets/Editor/EditorGUIHelper.cs) - A part of my helper library. It provides useful EditorGUI and GUILayout extensions.
