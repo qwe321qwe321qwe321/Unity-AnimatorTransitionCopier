@@ -5,6 +5,7 @@ It helps you to depart from suffering when you have to change animation states i
 
 ## Features
 * It copys full infomation, including transition settings and conditions.
+    * It holds the order of the transitions in state as well.
 * Two ways to copy:
     1. Selected transitions
     2. Ingoing/Outgoing transitions of selected state 
