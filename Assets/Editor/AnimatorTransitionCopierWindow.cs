@@ -123,12 +123,9 @@ namespace PeDev {
 						RefreshCurrentStatesInLayer();
 						m_CopiedAnimatorStateTransitions.Clear();
 						foreach (var transition in selectedTransitions) {
-							if (!TryGetFullInfoInTransition(transition, out AnimatorStateTransitionInfo info)) {
-								Debug.LogWarning($"Selected transition is not in {m_TargetAnimatorController.name}.{m_TargetAnimatorController.layers[m_AnimatorLayerIndex].name}");
-								m_CopiedAnimatorStateTransitions.Clear();
-								break;
+							if (TryGetFullInfoInTransition(transition, out AnimatorStateTransitionInfo info)) {
+								m_CopiedAnimatorStateTransitions.Add(info);
 							}
-							m_CopiedAnimatorStateTransitions.Add(info);
 						}
 					}
 				}
@@ -225,6 +222,11 @@ namespace PeDev {
 
 		bool TryGetFullInfoInTransition(AnimatorTransitionBase transition, out AnimatorStateTransitionInfo info) {
 			if (transition is AnimatorStateTransition stateTransition) {
+				if (!transition.isExit && !transition.destinationState) {
+					Debug.LogWarning($"It doesn't support copy transitions which source or destination is a state machine.");
+					info = default;
+					return false;
+				}
 				foreach (var state in m_AllAnimatorStatesInLayer) {
 					for (int i = 0; i < state.transitions.Length; i++) {
 						if (transition.GetInstanceID() == state.transitions[i].GetInstanceID()) {
@@ -255,9 +257,14 @@ namespace PeDev {
 			}
 
 			if (transition is AnimatorTransition entryTransition) {
+				if (!transition.isExit && !transition.destinationState) {
+					Debug.LogWarning($"It doesn't support copy transitions which source or destination is a state machine.");
+					info = default;
+					return false;
+				}
+
 				// Entry transitions
 				foreach (var stateMachine in m_AllStateMachinesInLayer) {
-
 					for (int i = 0; i < stateMachine.entryTransitions.Length; i++) {
 						if (transition.GetInstanceID() == stateMachine.entryTransitions[i].GetInstanceID()) {
 							info = new AnimatorStateTransitionInfo() {
@@ -273,6 +280,7 @@ namespace PeDev {
             }
 
 			// Failed.
+			Debug.LogWarning($"Selected transition is not in {m_TargetAnimatorController.name}.{m_TargetAnimatorController.layers[m_AnimatorLayerIndex].name}.");
 			info = default;
 			return false;
 		}
@@ -498,24 +506,8 @@ namespace PeDev {
 			dst.solo = src.solo;
 			dst.conditions = src.conditions.ToArray();
 		}
-		static void CopyAnimatorStateTransition(AnimatorTransition src, AnimatorStateTransition dst) {
-			dst.hideFlags = src.hideFlags;
-			dst.isExit = src.isExit;
-			dst.mute = src.mute;
-			dst.name = src.name;
-			dst.solo = src.solo;
-			dst.conditions = src.conditions.ToArray();
-		}
 
 		static void CopyAnimatorTransition(AnimatorTransition src, AnimatorTransition dst) {
-			dst.isExit = src.isExit;
-			dst.hideFlags = src.hideFlags;
-			dst.mute = src.mute;
-			dst.name = src.name;
-			dst.solo = src.solo;
-			dst.conditions = src.conditions.ToArray();
-		}
-		static void CopyAnimatorTransition(AnimatorStateTransition src, AnimatorTransition dst) {
 			dst.isExit = src.isExit;
 			dst.hideFlags = src.hideFlags;
 			dst.mute = src.mute;
