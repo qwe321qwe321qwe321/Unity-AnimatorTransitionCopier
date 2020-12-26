@@ -27,20 +27,69 @@ namespace PeDev {
 		int m_AnimatorLayerIndex;
 
 		bool m_HasRefreshedAnimatorLayers;
+		AnimatorStateMachine m_CurrentLayerStateMachine;
 		List<AnimatorState> m_AllAnimatorStatesInLayer = new List<AnimatorState>();
+		List<AnimatorStateMachine> m_AllStateMachinesInLayer = new List<AnimatorStateMachine>();
 		Dictionary<int, string> m_AnimatorStateHashToFullName = new Dictionary<int, string>();
 
 		List<AnimatorStateTransitionInfo> m_CopiedAnimatorStateTransitions = new List<AnimatorStateTransitionInfo>();
 
 		bool IsCurrentLayerValid => m_TargetAnimatorController != null && m_AnimatorLayerIndex < m_TargetAnimatorController.layers.Length;
 
+		enum SourceStateType {
+			Normal = 0,
+			AnyState = 1,
+			EntryState = 2,
+        }
 		struct AnimatorStateTransitionInfo {
+			public SourceStateType sourceStateType;
 			public AnimatorState srcState;
 			public AnimatorStateTransition transition;
+
+			public AnimatorStateMachine srcStateMachine;
+			public AnimatorTransition entryTransition;
+
 			public int orderInSrcTransitions;
 
 			public bool IsValid() {
-				return srcState && transition;
+                switch (sourceStateType) {
+                    case SourceStateType.Normal:
+						if (!srcState || !transition) {
+							return false;
+						}
+						break;
+                    case SourceStateType.AnyState:
+						if (!srcStateMachine || !transition) { // any state doesn't have srcState.
+							return false;
+						}
+						break;
+                    case SourceStateType.EntryState:
+						if (!srcStateMachine || !entryTransition) {
+							return false;
+						}
+						break;
+                }
+				return true;
+			}
+
+			public override string ToString() {
+				if (!IsValid()) {
+					return "<invalid_transitions>";
+                }
+                switch (sourceStateType) {
+                    case SourceStateType.Normal:
+						if (transition.isExit) {
+							return $"{srcState.name}->Exit State";
+						}
+						// Normal.
+						return $"{srcState.name}->{transition.destinationState}";
+					case SourceStateType.AnyState:
+						return $"Any State->{transition.destinationState}";
+					case SourceStateType.EntryState:
+						return $"Entry State->{entryTransition.destinationState}";
+                }
+
+				return "<unknown_type_transitions>";
 			}
 		}
 
@@ -65,11 +114,11 @@ namespace PeDev {
 
 			EditorGUILayout.Space(10f);
 			using (new EditorGUI.DisabledGroupScope(!IsCurrentLayerValid)) {
-				AnimatorStateTransition[] selectedTransitions = Selection.objects.Select(x => x as AnimatorStateTransition).Where(y => y != null).ToArray();
+				AnimatorTransitionBase[] selectedTransitions = Selection.objects.Select(x => x as AnimatorTransitionBase).Where(y => y != null).ToArray();
 				bool canCopySelectedTransitions = selectedTransitions.Length > 0;
 				if (canCopySelectedTransitions) {
 					EditorGUIHelper.LabelField("Copy Transitions", FontStyle.Bold);
-
+					
 					if (EditorGUIHelper.Button("Copy selected transitions", EditorGUIHelper.EditorButtonSize.Large)) {
 						RefreshCurrentStatesInLayer();
 						m_CopiedAnimatorStateTransitions.Clear();
@@ -130,61 +179,112 @@ namespace PeDev {
 			if (IsCurrentLayerValid && m_CopiedAnimatorStateTransitions.Count > 0) {
 				string hint = $"Copied {m_CopiedAnimatorStateTransitions.Count} transitions: \n\n";
 				foreach (var transitionInfo in m_CopiedAnimatorStateTransitions) {
-					if (!transitionInfo.IsValid()) {
-						hint += "<deleted_transition>\n";
-					} else {
-						hint += $"{transitionInfo.srcState.name}->{transitionInfo.transition.destinationState.name}\n";
-					}
+					hint += $"{transitionInfo.ToString()}\n";
 				}
 				EditorGUILayout.HelpBox(hint, MessageType.Info);
 
 			}
+
+			
 		}
 
 		void RefreshCurrentStatesInLayer() {
 			if (!IsCurrentLayerValid || m_HasRefreshedAnimatorLayers) {
 				return;
 			}
-			AnimatorStateMachine stateMachine = m_TargetAnimatorController.layers[m_AnimatorLayerIndex].stateMachine;
+			m_CurrentLayerStateMachine = m_TargetAnimatorController.layers[m_AnimatorLayerIndex].stateMachine;
 			m_AllAnimatorStatesInLayer.Clear();
+			m_AllStateMachinesInLayer.Clear();
+			m_AllStateMachinesInLayer.Add(m_CurrentLayerStateMachine); // Including layer state machine.
 			m_AnimatorStateHashToFullName.Clear();
-			GetAllStatesInStateMachineRecursively(stateMachine, "");
+			GetAllStatesInStateMachineRecursively(m_CurrentLayerStateMachine, "");
 		}
 		void GetAllStatesInStateMachineRecursively(AnimatorStateMachine stateMachine, string prefix) {
-			foreach (var state in stateMachine.states) {
-				m_AllAnimatorStatesInLayer.Add(state.state);
-				if (m_AnimatorStateHashToFullName.ContainsKey(state.state.GetInstanceID())) {
-					Debug.LogWarning($"{prefix + state.state.name}, {m_AnimatorStateHashToFullName[state.state.GetInstanceID()]}");
+			foreach (var childState in stateMachine.states) {
+				var state = childState.state;
+				m_AllAnimatorStatesInLayer.Add(state);
+				if (m_AnimatorStateHashToFullName.ContainsKey(state.GetInstanceID())) {
+					Debug.LogWarning($"{prefix + state.name}, {m_AnimatorStateHashToFullName[state.GetInstanceID()]}");
 				} else {
-					m_AnimatorStateHashToFullName.Add(state.state.GetInstanceID(), prefix + state.state.name);
+					m_AnimatorStateHashToFullName.Add(state.GetInstanceID(), prefix + state.name);
 				}
 			}
 			foreach (var childStateMachine in stateMachine.stateMachines) {
-				string nextPrefix = prefix + childStateMachine.stateMachine.name + ".";
-				GetAllStatesInStateMachineRecursively(childStateMachine.stateMachine, nextPrefix);
+				var subStateMachine = childStateMachine.stateMachine;
+				m_AllStateMachinesInLayer.Add(subStateMachine);
+				if (m_AnimatorStateHashToFullName.ContainsKey(subStateMachine.GetInstanceID())) {
+					Debug.LogWarning($"{prefix + subStateMachine.name}, {m_AnimatorStateHashToFullName[subStateMachine.GetInstanceID()]}");
+				} else {
+					m_AnimatorStateHashToFullName.Add(subStateMachine.GetInstanceID(), prefix + subStateMachine.name);
+				}
+
+				string nextPrefix = prefix + subStateMachine.name + ".";
+				GetAllStatesInStateMachineRecursively(subStateMachine, nextPrefix);
 			}
 		}
 
-		bool TryGetFullInfoInTransition(AnimatorStateTransition transition, out AnimatorStateTransitionInfo info) {
-			foreach (var state in m_AllAnimatorStatesInLayer) {
-				for (int i = 0; i < state.transitions.Length; i++) {
-					if (transition.GetInstanceID() == state.transitions[i].GetInstanceID()) {
-						info = new AnimatorStateTransitionInfo() {
-							srcState = state,
-							transition = transition,
-							orderInSrcTransitions = i
-						};
-						return true;
+		bool TryGetFullInfoInTransition(AnimatorTransitionBase transition, out AnimatorStateTransitionInfo info) {
+			if (transition is AnimatorStateTransition stateTransition) {
+				foreach (var state in m_AllAnimatorStatesInLayer) {
+					for (int i = 0; i < state.transitions.Length; i++) {
+						if (transition.GetInstanceID() == state.transitions[i].GetInstanceID()) {
+							info = new AnimatorStateTransitionInfo() {
+								srcState = state,
+								transition = stateTransition,
+								orderInSrcTransitions = i
+							};
+							return true;
+						}
+					}
+				}
+
+				// AnyState transitions
+				foreach (var stateMachine in m_AllStateMachinesInLayer) {
+					for (int i = 0; i < stateMachine.anyStateTransitions.Length; i++) {
+						if (transition.GetInstanceID() == stateMachine.anyStateTransitions[i].GetInstanceID()) {
+							info = new AnimatorStateTransitionInfo() {
+								sourceStateType = SourceStateType.AnyState,
+								transition = stateTransition,
+								srcStateMachine = stateMachine,
+								orderInSrcTransitions = i
+							};
+							return true;
+						}
 					}
 				}
 			}
+
+			if (transition is AnimatorTransition entryTransition) {
+				// Entry transitions
+				foreach (var stateMachine in m_AllStateMachinesInLayer) {
+
+					for (int i = 0; i < stateMachine.entryTransitions.Length; i++) {
+						if (transition.GetInstanceID() == stateMachine.entryTransitions[i].GetInstanceID()) {
+							info = new AnimatorStateTransitionInfo() {
+								sourceStateType = SourceStateType.EntryState,
+								srcStateMachine = stateMachine,
+								entryTransition = entryTransition,
+								orderInSrcTransitions = i
+							};
+							return true;
+						}
+					}
+				}
+            }
+
+			// Failed.
 			info = default;
 			return false;
 		}
 
-		void CopyOutgoingTransitions(AnimatorState target, List<AnimatorStateTransitionInfo> copyTo) {
+        #region Copy/Paste by selected state/stateMachine
+        void CopyOutgoingTransitions(AnimatorState target, List<AnimatorStateTransitionInfo> copyTo) {
 			copyTo.Clear();
 			for (int i = 0; i < target.transitions.Length; i++) {
+				if (!target.transitions[i].isExit && !target.transitions[i].destinationState) {
+					// Don't handle state machine transition.
+					continue;
+                }
 				copyTo.Add(new AnimatorStateTransitionInfo() {
 					srcState = target,
 					transition = target.transitions[i],
@@ -199,8 +299,13 @@ namespace PeDev {
 			// AddTransition() has already supported undo.
 			foreach (var transitionInfo in transitionInfos) {
 				if (!transitionInfo.IsValid()) { continue; }
-				target.AddTransition(CreateTransition(transitionInfo.transition.destinationState, transitionInfo.transition));
+				if (transitionInfo.transition.isExit) {
+					target.AddTransition(CreateExitTransition(target, transitionInfo.transition));
+				} else {
+					target.AddTransition(CreateStateTransition(target, transitionInfo.transition.destinationState, transitionInfo.transition));
+                }
 			}
+
 		}
 
 		void CopyIngoingTransitions(AnimatorState target, List<AnimatorStateTransitionInfo> copyTo) {
@@ -217,44 +322,207 @@ namespace PeDev {
 					}
 				}
 			}
+
+			foreach (var stateMachine in m_AllStateMachinesInLayer) {
+				// Entry transitions
+				for (int i = 0; i < stateMachine.entryTransitions.Length; i++) {
+					var transition = stateMachine.entryTransitions[i];
+					if (transition.destinationState == target) {
+						copyTo.Add(new AnimatorStateTransitionInfo() {
+							sourceStateType = SourceStateType.EntryState,
+							srcStateMachine = stateMachine,
+							entryTransition = transition,
+							orderInSrcTransitions = i
+						});
+					}
+				}
+			}
+
+            // AnyState transitions
+            for (int i = 0; i < m_CurrentLayerStateMachine.anyStateTransitions.Length; i++) {
+				var transition = m_CurrentLayerStateMachine.anyStateTransitions[i];
+				if (transition.destinationState == target) {
+					copyTo.Add(new AnimatorStateTransitionInfo() {
+						sourceStateType = SourceStateType.AnyState,
+						srcStateMachine = m_CurrentLayerStateMachine,
+						transition = transition,
+						orderInSrcTransitions = i
+					});
+				}
+			}
 		}
 
 		void PasteAsIngoingTransitions(AnimatorState target, IEnumerable<AnimatorStateTransitionInfo> transitionInfos) {
 			// Because AddTransition() will insert transition into the first element.
 			transitionInfos = transitionInfos.Reverse();
+
 			foreach (var transitionInfo in transitionInfos) {
 				if (!transitionInfo.IsValid()) { continue; }
-				// Insert new state into the position of original one.
-				List<AnimatorStateTransition> newTransitions = new List<AnimatorStateTransition>(transitionInfo.srcState.transitions);
-				newTransitions.Insert(transitionInfo.orderInSrcTransitions, CreateTransition(target, transitionInfo.transition));
-				// Record undo before replace transitions.
-				Undo.RegisterCompleteObjectUndo(transitionInfo.srcState, "Add new transitions");
-				transitionInfo.srcState.transitions = newTransitions.ToArray();
+
+                switch (transitionInfo.sourceStateType) {
+                    case SourceStateType.Normal: { 
+						List<AnimatorStateTransition> newTransitions = new List<AnimatorStateTransition>(transitionInfo.srcState.transitions);
+						// Insert new state into the position of original one.
+						newTransitions.Insert(transitionInfo.orderInSrcTransitions, CreateStateTransition(transitionInfo.srcState, target, transitionInfo.transition));
+						// Record undo before replace transitions.
+						Undo.RegisterCompleteObjectUndo(transitionInfo.srcState, "Add new transitions");
+						transitionInfo.srcState.transitions = newTransitions.ToArray();
+					}
+					break;
+                    case SourceStateType.AnyState: {
+						List<AnimatorStateTransition> newAnyStateTransitions = new List<AnimatorStateTransition>(transitionInfo.srcStateMachine.anyStateTransitions);
+						// Insert new state into the position of original one.
+						newAnyStateTransitions.Insert(transitionInfo.orderInSrcTransitions, CreateAnyTransition(transitionInfo.srcStateMachine, target, transitionInfo.transition));
+						// Record undo before replace transitions.
+						Undo.RegisterCompleteObjectUndo(transitionInfo.srcStateMachine, "Add new transitions");
+						transitionInfo.srcStateMachine.anyStateTransitions = newAnyStateTransitions.ToArray();
+					}
+					break;
+                    case SourceStateType.EntryState: {
+						List<AnimatorTransition> newEntryTransitions = new List<AnimatorTransition>(transitionInfo.srcStateMachine.entryTransitions);
+						// Insert new state into the position of original one.
+						newEntryTransitions.Insert(transitionInfo.orderInSrcTransitions, CreateEntryTransition(transitionInfo.srcStateMachine, target, transitionInfo.entryTransition));
+						// Record undo before replace transitions.
+						Undo.RegisterCompleteObjectUndo(transitionInfo.srcStateMachine, "Add new transitions");
+						transitionInfo.srcStateMachine.entryTransitions = newEntryTransitions.ToArray();
+					}
+					break;
+                }
 			}
 		}
+        #endregion
 
-		string GetAnimatorStateFullName(AnimatorState state) {
+        string GetAnimatorStateFullName(AnimatorState state) {
 			return m_AnimatorStateHashToFullName[state.GetInstanceID()];
 		}
+		string GetSubStateMachineFullName(AnimatorStateMachine subStateMachine) {
+			return m_AnimatorStateHashToFullName[subStateMachine.GetInstanceID()];
+		}
 
-		static AnimatorStateTransition CreateTransition(AnimatorState dstState, AnimatorStateTransition template) {
-			AnimatorStateTransition newTransition = new AnimatorStateTransition();
+		#region Static factory of AnimatorStateTransition and AnimatorTransition
+		static AnimatorStateTransition CreateStateTransition(AnimatorState srcState, AnimatorState dstState, AnimatorStateTransition template) {
+			AnimatorStateTransition newTransition = CreateDefaultStateTransition(srcState);
+			
+			CopyAnimatorStateTransition(template, newTransition);
+			newTransition.isExit = false;
 			newTransition.destinationState = dstState;
-			newTransition.canTransitionToSelf = template.canTransitionToSelf;
-			newTransition.duration = template.duration;
-			newTransition.exitTime = template.exitTime;
-			newTransition.hasExitTime = template.hasExitTime;
-			newTransition.hasFixedDuration = template.hasFixedDuration;
-			newTransition.interruptionSource = template.interruptionSource;
-			newTransition.isExit = template.isExit;
-			newTransition.mute = template.mute;
-			newTransition.name = template.name;
-			newTransition.offset = template.offset;
-			newTransition.orderedInterruption = template.orderedInterruption;
-			newTransition.solo = template.solo;
-			newTransition.conditions = template.conditions.ToArray();
+			return newTransition;
+		}
+
+		static AnimatorStateTransition CreateExitTransition(AnimatorState srcState, AnimatorStateTransition template) {
+			AnimatorStateTransition newTransition = CreateDefaultStateTransition(srcState);
+
+			CopyAnimatorStateTransition(template, newTransition);
+			newTransition.isExit = true;
+			return newTransition;
+		}
+
+		static AnimatorTransition CreateEntryTransition(AnimatorStateMachine srcStateMachine, AnimatorState dstState, AnimatorTransition template) {
+			AnimatorTransition newTransition = CreateDefaultTransition(srcStateMachine);
+			CopyAnimatorTransition(template, newTransition);
+			newTransition.destinationState = dstState;
+			return newTransition;
+		}
+
+		static AnimatorStateTransition CreateAnyTransition(AnimatorStateMachine srcStateMachine, AnimatorState dstState, AnimatorStateTransition template) {
+			AnimatorStateTransition newTransition = CreateDefaultStateTransition(srcStateMachine);
+			CopyAnimatorStateTransition(template, newTransition);
+			newTransition.destinationState = dstState;
+			return newTransition;
+		}
+
+		/// <summary>
+		/// Create a AnimatorStateTransition and stored in the specific AnimatorState. 
+		/// </summary>
+		/// <param name="storedState"></param>
+		/// <returns></returns>
+		static AnimatorStateTransition CreateDefaultStateTransition(AnimatorState storedState) {
+			AnimatorStateTransition newTransition = new AnimatorStateTransition();
+			// Store in the asset.
+			bool flag = AssetDatabase.GetAssetPath(storedState) != "";
+			if (flag) {
+				AssetDatabase.AddObjectToAsset(newTransition, AssetDatabase.GetAssetPath(storedState));
+			}
+			newTransition.hideFlags = HideFlags.HideInHierarchy;
 
 			return newTransition;
 		}
-	}
+
+		/// <summary>
+		/// Create a AnimatorStateTransition and stored in the specific AnimatorStateMachine. 
+		/// </summary>
+		/// <param name="storedStateMachine"></param>
+		/// <returns></returns>
+		static AnimatorStateTransition CreateDefaultStateTransition(AnimatorStateMachine storedStateMachine) {
+			AnimatorStateTransition newTransition = new AnimatorStateTransition();
+			// Store in the asset.
+			bool flag = AssetDatabase.GetAssetPath(storedStateMachine) != "";
+			if (flag) {
+				AssetDatabase.AddObjectToAsset(newTransition, AssetDatabase.GetAssetPath(storedStateMachine));
+			}
+			newTransition.hideFlags = HideFlags.HideInHierarchy;
+
+			return newTransition;
+		}
+
+		/// <summary>
+		/// Create a AnimatorTransition and stored in the specific AnimatorStateMachine. 
+		/// </summary>
+		/// <param name="storedStateMachine"></param>
+		/// <returns></returns>
+		static AnimatorTransition CreateDefaultTransition(AnimatorStateMachine storedStateMachine) {
+			AnimatorTransition newTransition = new AnimatorTransition();
+			// Store in the asset.
+			bool flag = AssetDatabase.GetAssetPath(storedStateMachine) != "";
+			if (flag) {
+				AssetDatabase.AddObjectToAsset(newTransition, AssetDatabase.GetAssetPath(storedStateMachine));
+			}
+			newTransition.hideFlags = HideFlags.HideInHierarchy;
+
+			return newTransition;
+		}
+
+		static void CopyAnimatorStateTransition(AnimatorStateTransition src, AnimatorStateTransition dst) {
+			dst.canTransitionToSelf = src.canTransitionToSelf;
+			dst.duration = src.duration;
+			dst.exitTime = src.exitTime;
+			dst.hasExitTime = src.hasExitTime;
+			dst.hasFixedDuration = src.hasFixedDuration;
+			dst.hideFlags = src.hideFlags;
+			dst.interruptionSource = src.interruptionSource;
+			dst.isExit = src.isExit;
+			dst.mute = src.mute;
+			dst.name = src.name;
+			dst.offset = src.offset;
+			dst.orderedInterruption = src.orderedInterruption;
+			dst.solo = src.solo;
+			dst.conditions = src.conditions.ToArray();
+		}
+		static void CopyAnimatorStateTransition(AnimatorTransition src, AnimatorStateTransition dst) {
+			dst.hideFlags = src.hideFlags;
+			dst.isExit = src.isExit;
+			dst.mute = src.mute;
+			dst.name = src.name;
+			dst.solo = src.solo;
+			dst.conditions = src.conditions.ToArray();
+		}
+
+		static void CopyAnimatorTransition(AnimatorTransition src, AnimatorTransition dst) {
+			dst.isExit = src.isExit;
+			dst.hideFlags = src.hideFlags;
+			dst.mute = src.mute;
+			dst.name = src.name;
+			dst.solo = src.solo;
+			dst.conditions = src.conditions.ToArray();
+		}
+		static void CopyAnimatorTransition(AnimatorStateTransition src, AnimatorTransition dst) {
+			dst.isExit = src.isExit;
+			dst.hideFlags = src.hideFlags;
+			dst.mute = src.mute;
+			dst.name = src.name;
+			dst.solo = src.solo;
+			dst.conditions = src.conditions.ToArray();
+		}
+        #endregion
+    }
 }
