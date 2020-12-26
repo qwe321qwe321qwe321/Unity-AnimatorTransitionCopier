@@ -4,12 +4,14 @@ AnimatorTransitionCopier is a simple tool to **copy paste animation transitions*
 It helps you to depart from suffering when you have to change animation states in a huge state machine, such as from clip to blend tree.
 
 ## Features
-* It copys full infomation, including transition settings and conditions.
+- [x] It copys full infomation, including transition settings and conditions.
     * It holds the order of the transitions in state as well.
-* Two ways to copy:
+- [x] Two ways to copy:
     1. Selected transitions
     2. Ingoing/Outgoing transitions of selected state 
-* It supports undo/redo as well.
+- [x] It supports undo/redo as well.
+- [ ] It supports transitions between StateMachine and State.
+- [ ] It supports AnyState transitions.
 
 ## Preview
 ### Copy selected transitions
