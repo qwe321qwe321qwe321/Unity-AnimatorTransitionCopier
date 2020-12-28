@@ -302,8 +302,6 @@ namespace PeDev {
 		}
 
 		void PasteAsOutgoingTransitions(AnimatorState target, IEnumerable<AnimatorStateTransitionInfo> transitionInfos) {
-			// Because AddTransition() will insert transition into the first element.
-			transitionInfos = transitionInfos.Reverse();
 			// AddTransition() has already supported undo.
 			foreach (var transitionInfo in transitionInfos) {
 				if (!transitionInfo.IsValid()) { continue; }
