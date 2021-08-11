@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Created by PeDev 2020
  * https://github.com/qwe321qwe321qwe321/Unity-AnimatorTransitionCopier
  */
@@ -25,6 +25,7 @@ namespace PeDev {
 
 		AnimatorController m_TargetAnimatorController;
 		int m_AnimatorLayerIndex;
+		bool m_IgnoreSelfTransitions = true;
 
 		bool m_HasRefreshedAnimatorLayers;
 		AnimatorStateMachine m_CurrentLayerStateMachine;
@@ -40,7 +41,7 @@ namespace PeDev {
 			Normal = 0,
 			AnyState = 1,
 			EntryState = 2,
-        }
+		}
 		struct AnimatorStateTransitionInfo {
 			public SourceStateType sourceStateType;
 			public AnimatorState srcState;
@@ -52,32 +53,32 @@ namespace PeDev {
 			public int orderInSrcTransitions;
 
 			public bool IsValid() {
-                switch (sourceStateType) {
-                    case SourceStateType.Normal:
+				switch (sourceStateType) {
+					case SourceStateType.Normal:
 						if (!srcState || !transition) {
 							return false;
 						}
 						break;
-                    case SourceStateType.AnyState:
+					case SourceStateType.AnyState:
 						if (!srcStateMachine || !transition) { // any state doesn't have srcState.
 							return false;
 						}
 						break;
-                    case SourceStateType.EntryState:
+					case SourceStateType.EntryState:
 						if (!srcStateMachine || !entryTransition) {
 							return false;
 						}
 						break;
-                }
+				}
 				return true;
 			}
 
 			public override string ToString() {
 				if (!IsValid()) {
 					return "<invalid_transitions>";
-                }
-                switch (sourceStateType) {
-                    case SourceStateType.Normal:
+				}
+				switch (sourceStateType) {
+					case SourceStateType.Normal:
 						if (transition.isExit) {
 							return $"{srcState.name}->Exit State";
 						}
@@ -87,7 +88,7 @@ namespace PeDev {
 						return $"Any State->{transition.destinationState}";
 					case SourceStateType.EntryState:
 						return $"Entry State->{entryTransition.destinationState}";
-                }
+				}
 
 				return "<unknown_type_transitions>";
 			}
@@ -118,7 +119,7 @@ namespace PeDev {
 				bool canCopySelectedTransitions = selectedTransitions.Length > 0;
 				if (canCopySelectedTransitions) {
 					EditorGUIHelper.LabelField("Copy Transitions", FontStyle.Bold);
-					
+
 					if (EditorGUIHelper.Button("Copy selected transitions", EditorGUIHelper.EditorButtonSize.Large)) {
 						RefreshCurrentStatesInLayer();
 						m_CopiedAnimatorStateTransitions.Clear();
@@ -156,24 +157,24 @@ namespace PeDev {
 
 						EditorGUIHelper.LabelField("Paste Transitions to state", FontStyle.Bold);
 						EditorGUI.indentLevel++;
+						m_IgnoreSelfTransitions = EditorGUILayout.Toggle("Ignore self transitions", m_IgnoreSelfTransitions);
 						using (new EditorGUI.DisabledGroupScope(!canPasteTransitions)) {
 							using (new EditorGUILayout.HorizontalScope()) {
-								Object[] selectedStates = Selection.objects;
+								// Try to multi-paste
+								AnimatorState[] selectedStates = Selection.GetFiltered<AnimatorState>(SelectionMode.Unfiltered);
 								if (EditorGUIHelper.Button("Paste as *Ingoing* transitions", EditorGUIHelper.EditorButtonSize.Large)) {
-									if( null != selectedStates && 0 != selectedStates.Length ) {
-										PasteAsIngoingTransitions( selectedStates, m_CopiedAnimatorStateTransitions );
-									}
-									else {
-										PasteAsIngoingTransitions( selectedState, m_CopiedAnimatorStateTransitions );
+									if (null != selectedStates && 0 != selectedStates.Length) {
+										PasteAsIngoingTransitions(selectedStates, m_CopiedAnimatorStateTransitions);
+									} else {
+										PasteAsIngoingTransitions(selectedState, m_CopiedAnimatorStateTransitions);
 									}
 									Debug.Log($"Pasted {m_CopiedAnimatorStateTransitions.Count} ingoing transitions.");
 								}
 								if (EditorGUIHelper.Button("Paste as *Outgoing* transitions", EditorGUIHelper.EditorButtonSize.Large)) {
-									if( null != selectedStates && 0 != selectedStates.Length ) {
-										PasteAsOutgoingTransitions( selectedStates, m_CopiedAnimatorStateTransitions );
-									}
-									else {
-										PasteAsOutgoingTransitions( selectedState, m_CopiedAnimatorStateTransitions );
+									if (null != selectedStates && 0 != selectedStates.Length) {
+										PasteAsOutgoingTransitions(selectedStates, m_CopiedAnimatorStateTransitions);
+									} else {
+										PasteAsOutgoingTransitions(selectedState, m_CopiedAnimatorStateTransitions);
 									}
 									Debug.Log($"Pasted {m_CopiedAnimatorStateTransitions.Count} outgoing transitions.");
 								}
@@ -193,7 +194,7 @@ namespace PeDev {
 
 			}
 
-			
+
 		}
 
 		void RefreshCurrentStatesInLayer() {
@@ -288,7 +289,7 @@ namespace PeDev {
 						}
 					}
 				}
-            }
+			}
 
 			// Failed.
 			Debug.LogWarning($"Selected transition is not in {m_TargetAnimatorController.name}.{m_TargetAnimatorController.layers[m_AnimatorLayerIndex].name}.");
@@ -296,14 +297,14 @@ namespace PeDev {
 			return false;
 		}
 
-        #region Copy/Paste by selected state/stateMachine
-        void CopyOutgoingTransitions(AnimatorState target, List<AnimatorStateTransitionInfo> copyTo) {
+		#region Copy/Paste by selected state/stateMachine
+		void CopyOutgoingTransitions(AnimatorState target, List<AnimatorStateTransitionInfo> copyTo) {
 			copyTo.Clear();
 			for (int i = 0; i < target.transitions.Length; i++) {
 				if (!target.transitions[i].isExit && !target.transitions[i].destinationState) {
 					// Don't handle state machine transition.
 					continue;
-                }
+				}
 				copyTo.Add(new AnimatorStateTransitionInfo() {
 					srcState = target,
 					transition = target.transitions[i],
@@ -319,17 +320,21 @@ namespace PeDev {
 				if (transitionInfo.transition.isExit) {
 					target.AddTransition(CreateExitTransition(target, transitionInfo.transition));
 				} else {
-					if( transitionInfo.transition.destinationState.GetInstanceID() == target.GetInstanceID() ) { continue; }
+					if (m_IgnoreSelfTransitions) {
+						if (transitionInfo.transition.destinationState != null &&
+							transitionInfo.transition.destinationState.GetInstanceID() == target.GetInstanceID()) { 
+							continue;
+						}
+					}
 					target.AddTransition(CreateStateTransition(target, transitionInfo.transition.destinationState, transitionInfo.transition));
-                }
+				}
 			}
 		}
-		
-		void PasteAsOutgoingTransitions( Object[] targets, IEnumerable<AnimatorStateTransitionInfo> transitionInfos ) {
-			foreach( var target in targets ) {
-				AnimatorState state = target as AnimatorState;
-				if( null == state ) { continue; }
-				PasteAsOutgoingTransitions( state, transitionInfos );
+
+		void PasteAsOutgoingTransitions(AnimatorState[] states, IEnumerable<AnimatorStateTransitionInfo> transitionInfos) {
+			foreach (var state in states) {
+				if (null == state) { continue; }
+				PasteAsOutgoingTransitions(state, transitionInfos);
 			}
 		}
 
@@ -364,8 +369,8 @@ namespace PeDev {
 				}
 			}
 
-            // AnyState transitions
-            for (int i = 0; i < m_CurrentLayerStateMachine.anyStateTransitions.Length; i++) {
+			// AnyState transitions
+			for (int i = 0; i < m_CurrentLayerStateMachine.anyStateTransitions.Length; i++) {
 				var transition = m_CurrentLayerStateMachine.anyStateTransitions[i];
 				if (transition.destinationState == target) {
 					copyTo.Add(new AnimatorStateTransitionInfo() {
@@ -385,9 +390,14 @@ namespace PeDev {
 			foreach (var transitionInfo in transitionInfos) {
 				if (!transitionInfo.IsValid()) { continue; }
 
-                switch (transitionInfo.sourceStateType) {
-                    case SourceStateType.Normal: {
-						if( transitionInfo.transition.destinationState.GetInstanceID() == target.GetInstanceID() ) { continue; }
+				switch (transitionInfo.sourceStateType) {
+					case SourceStateType.Normal: {
+						if (m_IgnoreSelfTransitions) {
+							if (transitionInfo.transition.destinationState != null &&
+								transitionInfo.transition.destinationState.GetInstanceID() == target.GetInstanceID()) {
+								continue;
+							}
+						}
 						List<AnimatorStateTransition> newTransitions = new List<AnimatorStateTransition>(transitionInfo.srcState.transitions);
 						// Insert new state into the position of original one.
 						newTransitions.Insert(transitionInfo.orderInSrcTransitions, CreateStateTransition(transitionInfo.srcState, target, transitionInfo.transition));
@@ -396,7 +406,7 @@ namespace PeDev {
 						transitionInfo.srcState.transitions = newTransitions.ToArray();
 					}
 					break;
-                    case SourceStateType.AnyState: {
+					case SourceStateType.AnyState: {
 						List<AnimatorStateTransition> newAnyStateTransitions = new List<AnimatorStateTransition>(transitionInfo.srcStateMachine.anyStateTransitions);
 						// Insert new state into the position of original one.
 						newAnyStateTransitions.Insert(transitionInfo.orderInSrcTransitions, CreateAnyTransition(transitionInfo.srcStateMachine, target, transitionInfo.transition));
@@ -405,7 +415,7 @@ namespace PeDev {
 						transitionInfo.srcStateMachine.anyStateTransitions = newAnyStateTransitions.ToArray();
 					}
 					break;
-                    case SourceStateType.EntryState: {
+					case SourceStateType.EntryState: {
 						List<AnimatorTransition> newEntryTransitions = new List<AnimatorTransition>(transitionInfo.srcStateMachine.entryTransitions);
 						// Insert new state into the position of original one.
 						newEntryTransitions.Insert(transitionInfo.orderInSrcTransitions, CreateEntryTransition(transitionInfo.srcStateMachine, target, transitionInfo.entryTransition));
@@ -414,15 +424,14 @@ namespace PeDev {
 						transitionInfo.srcStateMachine.entryTransitions = newEntryTransitions.ToArray();
 					}
 					break;
-                }
+				}
 			}
 		}
 
-		void PasteAsIngoingTransitions( Object[] targets, IEnumerable<AnimatorStateTransitionInfo> transitionInfos ) {
-			foreach( var target in targets ) {
-				AnimatorState state = target as AnimatorState;
-				if( null == state )	{ continue; }
-				PasteAsIngoingTransitions( state, transitionInfos );
+		void PasteAsIngoingTransitions(AnimatorState[] states, IEnumerable<AnimatorStateTransitionInfo> transitionInfos) {
+			foreach (var state in states) {
+				if (null == state) { continue; }
+				PasteAsIngoingTransitions(state, transitionInfos);
 			}
 		}
 		#endregion
@@ -437,7 +446,7 @@ namespace PeDev {
 		#region Static factory of AnimatorStateTransition and AnimatorTransition
 		static AnimatorStateTransition CreateStateTransition(AnimatorState srcState, AnimatorState dstState, AnimatorStateTransition template) {
 			AnimatorStateTransition newTransition = CreateDefaultStateTransition(srcState);
-			
+
 			CopyAnimatorStateTransition(template, newTransition);
 			newTransition.isExit = false;
 			newTransition.destinationState = dstState;
@@ -542,6 +551,6 @@ namespace PeDev {
 			dst.solo = src.solo;
 			dst.conditions = src.conditions.ToArray();
 		}
-        #endregion
-    }
+		#endregion
+	}
 }
