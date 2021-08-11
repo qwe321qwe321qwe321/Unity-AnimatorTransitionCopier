@@ -158,12 +158,23 @@ namespace PeDev {
 						EditorGUI.indentLevel++;
 						using (new EditorGUI.DisabledGroupScope(!canPasteTransitions)) {
 							using (new EditorGUILayout.HorizontalScope()) {
+								Object[] selectedStates = Selection.objects;
 								if (EditorGUIHelper.Button("Paste as *Ingoing* transitions", EditorGUIHelper.EditorButtonSize.Large)) {
-									PasteAsIngoingTransitions(selectedState, m_CopiedAnimatorStateTransitions);
+									if( null != selectedStates && 0 != selectedStates.Length ) {
+										PasteAsIngoingTransitions( selectedStates, m_CopiedAnimatorStateTransitions );
+									}
+									else {
+										PasteAsIngoingTransitions( selectedState, m_CopiedAnimatorStateTransitions );
+									}
 									Debug.Log($"Pasted {m_CopiedAnimatorStateTransitions.Count} ingoing transitions.");
 								}
 								if (EditorGUIHelper.Button("Paste as *Outgoing* transitions", EditorGUIHelper.EditorButtonSize.Large)) {
-									PasteAsOutgoingTransitions(selectedState, m_CopiedAnimatorStateTransitions);
+									if( null != selectedStates && 0 != selectedStates.Length ) {
+										PasteAsOutgoingTransitions( selectedStates, m_CopiedAnimatorStateTransitions );
+									}
+									else {
+										PasteAsOutgoingTransitions( selectedState, m_CopiedAnimatorStateTransitions );
+									}
 									Debug.Log($"Pasted {m_CopiedAnimatorStateTransitions.Count} outgoing transitions.");
 								}
 							}
@@ -308,11 +319,20 @@ namespace PeDev {
 				if (transitionInfo.transition.isExit) {
 					target.AddTransition(CreateExitTransition(target, transitionInfo.transition));
 				} else {
+					if( transitionInfo.transition.destinationState.GetInstanceID() == target.GetInstanceID() ) { continue; }
 					target.AddTransition(CreateStateTransition(target, transitionInfo.transition.destinationState, transitionInfo.transition));
                 }
 			}
-
 		}
+		
+		void PasteAsOutgoingTransitions( Object[] targets, IEnumerable<AnimatorStateTransitionInfo> transitionInfos ) {
+			foreach( var target in targets ) {
+				AnimatorState state = target as AnimatorState;
+				if( null == state ) { continue; }
+				PasteAsOutgoingTransitions( state, transitionInfos );
+			}
+		}
+
 
 		void CopyIngoingTransitions(AnimatorState target, List<AnimatorStateTransitionInfo> copyTo) {
 			copyTo.Clear();
@@ -366,7 +386,8 @@ namespace PeDev {
 				if (!transitionInfo.IsValid()) { continue; }
 
                 switch (transitionInfo.sourceStateType) {
-                    case SourceStateType.Normal: { 
+                    case SourceStateType.Normal: {
+						if( transitionInfo.transition.destinationState.GetInstanceID() == target.GetInstanceID() ) { continue; }
 						List<AnimatorStateTransition> newTransitions = new List<AnimatorStateTransition>(transitionInfo.srcState.transitions);
 						// Insert new state into the position of original one.
 						newTransitions.Insert(transitionInfo.orderInSrcTransitions, CreateStateTransition(transitionInfo.srcState, target, transitionInfo.transition));
@@ -396,9 +417,17 @@ namespace PeDev {
                 }
 			}
 		}
-        #endregion
 
-        string GetAnimatorStateFullName(AnimatorState state) {
+		void PasteAsIngoingTransitions( Object[] targets, IEnumerable<AnimatorStateTransitionInfo> transitionInfos ) {
+			foreach( var target in targets ) {
+				AnimatorState state = target as AnimatorState;
+				if( null == state )	{ continue; }
+				PasteAsIngoingTransitions( state, transitionInfos );
+			}
+		}
+		#endregion
+
+		string GetAnimatorStateFullName(AnimatorState state) {
 			return m_AnimatorStateHashToFullName[state.GetInstanceID()];
 		}
 		string GetSubStateMachineFullName(AnimatorStateMachine subStateMachine) {
