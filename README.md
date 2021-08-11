@@ -11,6 +11,7 @@ It helps you to depart from suffering when you have to change animation states i
     2. Ingoing/Outgoing transitions of selected state 
 - [x] It supports undo/redo as well.
 - [x] It supports AnyState, EntryState, and ExitState.
+- [x] It supports multiple selection for pasting. (Contributed by @sungnyung)
 - [ ] It supports transitions between StateMachine and State. (yet)
 
 ## Preview
