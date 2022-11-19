@@ -82,6 +82,14 @@ namespace PeDev {
 						if (transition.isExit) {
 							return $"{srcState.name}->Exit State";
 						}
+
+						// If we have not destination state but have destination state machine
+						if (transition.destinationState == null &&
+							transition.destinationStateMachine != null)
+						{
+							return $"{srcState.name}->{transition.destinationStateMachine.name}";
+						}
+
 						// Normal.
 						return $"{srcState.name}->{transition.destinationState}";
 					case SourceStateType.AnyState:
@@ -234,7 +242,7 @@ namespace PeDev {
 
 		bool TryGetFullInfoInTransition(AnimatorTransitionBase transition, out AnimatorStateTransitionInfo info) {
 			if (transition is AnimatorStateTransition stateTransition) {
-				if (!transition.isExit && !transition.destinationState) {
+				if (!transition.isExit && !transition.destinationState && !transition.destinationStateMachine) {
 					Debug.LogWarning($"It doesn't support copy transitions which source or destination is a state machine.");
 					info = default;
 					return false;
@@ -326,7 +334,23 @@ namespace PeDev {
 							continue;
 						}
 					}
-					target.AddTransition(CreateStateTransition(target, transitionInfo.transition.destinationState, transitionInfo.transition));
+
+					// If we have destination state we will make transition to that state
+					if (transitionInfo.transition.destinationState != null)
+					{
+						target.AddTransition(CreateStateTransition(target, transitionInfo.transition.destinationState, transitionInfo.transition));
+					}
+					// Else if we have destination state machine we will make transition to it
+					else if (transitionInfo.transition.destinationStateMachine != null)
+					{
+						AnimatorStateTransition newTransition = target.AddTransition(transitionInfo.transition.destinationStateMachine);
+						CopyAnimatorStateTransition(transitionInfo.transition, newTransition);
+					}
+					// Otherwise some unexpected error occurs
+					else
+					{
+						Debug.LogError($"Null ref. Trying to make transition to destination that doesn't exist.");
+					}
 				}
 			}
 		}
