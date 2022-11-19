@@ -12,14 +12,14 @@ It helps you to depart from suffering when you have to change animation states i
 - [x] It supports undo/redo as well.
 - [x] It supports AnyState, EntryState, and ExitState.
 - [x] It supports multiple selection for pasting. (Contributed by [@sungnyung](https://github.com/sungnyung) and [@kwbn64](https://github.com/kwbn64) [#1](https://github.com/qwe321qwe321qwe321/Unity-AnimatorTransitionCopier/pull/1))
-- [ ] It supports transitions between StateMachine and State. (yet)
-   - [x] Copy selected transitions that goes from a State to a StateMachine.  (Contributed by [@Eyellen](https://github.com/Eyellen) [#3](https://github.com/qwe321qwe321qwe321/Unity-AnimatorTransitionCopier/pull/3))
-   - [ ] Copy outgoing transitions that goes from a State to a StateMachine.
-   - [ ] Copy selected transition that goes from a StateMachine to a State.
-   - [ ] Copy ingoing transitions that goes from a StateMachine to a State.
-   - [ ] Copy selected transitions that goes from a StateMachine to a StateMachine.
-   - [ ] Copy outgoing transitions that goes from a StateMachine to a StateMachine.
-   - [ ] Copy ingoing transitions that goes from a StateMachine to a StateMachine.
+- [x] It supports transitions between StateMachine and State.
+   - [x] Copy selected transitions that go from a State to a StateMachine.  (Contributed by [@Eyellen](https://github.com/Eyellen) [#3](https://github.com/qwe321qwe321qwe321/Unity-AnimatorTransitionCopier/pull/3))
+   - [x] Copy outgoing transitions that go from a State to a StateMachine. ([#4](https://github.com/qwe321qwe321qwe321/Unity-AnimatorTransitionCopier/pull/4))
+   - [x] Copy selected transitions that go from a StateMachine to a State. ([#4](https://github.com/qwe321qwe321qwe321/Unity-AnimatorTransitionCopier/pull/4))
+   - [x] Copy ingoing transitions that go from a StateMachine to a State. ([#4](https://github.com/qwe321qwe321qwe321/Unity-AnimatorTransitionCopier/pull/4))
+   - [x] Copy selected transitions that go from a StateMachine to a StateMachine. ([#4](https://github.com/qwe321qwe321qwe321/Unity-AnimatorTransitionCopier/pull/4))
+   - [x] Copy outgoing transitions that go from a StateMachine to a StateMachine. ([#4](https://github.com/qwe321qwe321qwe321/Unity-AnimatorTransitionCopier/pull/4))
+   - [x] Copy ingoing transitions that go from a StateMachine to a StateMachine. ([#4](https://github.com/qwe321qwe321qwe321/Unity-AnimatorTransitionCopier/pull/4))
 
 ## Preview
 ### Copy selected transitions
@@ -44,9 +44,10 @@ It helps you to depart from suffering when you have to change animation states i
 
 ## Issues & Warnings
 ### Can it copy transitions between state machine and state??
-**NO, IT CAN'T.** 
+**YES** 
 
-Although I've tried to implement this feature, it seems impossible to get the outgoing transitions from [AnimatorStateMachine](https://docs.unity3d.com/ScriptReference/Animations.AnimatorStateMachine.html). If someone can teach me how to get them, I'll make it.
+We solved this issue on [#3](https://github.com/qwe321qwe321qwe321/Unity-AnimatorTransitionCopier/pull/4), 
+[#4](https://github.com/qwe321qwe321qwe321/Unity-AnimatorTransitionCopier/pull/4).
 
 ### Pasting AnyState and EntryState seems broken?
 **NO, IT WORKS**
