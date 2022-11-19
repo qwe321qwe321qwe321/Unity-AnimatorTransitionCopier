@@ -11,8 +11,15 @@ It helps you to depart from suffering when you have to change animation states i
     2. Ingoing/Outgoing transitions of selected state 
 - [x] It supports undo/redo as well.
 - [x] It supports AnyState, EntryState, and ExitState.
-- [x] It supports multiple selection for pasting. (Contributed by @sungnyung)
+- [x] It supports multiple selection for pasting. (Contributed by [@sungnyung](https://github.com/sungnyung) and [@kwbn64](https://github.com/kwbn64) [#1](https://github.com/qwe321qwe321qwe321/Unity-AnimatorTransitionCopier/pull/1))
 - [ ] It supports transitions between StateMachine and State. (yet)
+   - [x] Copy selected transitions that goes from a State to a StateMachine.  (Contributed by [@Eyellen](https://github.com/Eyellen) [#3](https://github.com/qwe321qwe321qwe321/Unity-AnimatorTransitionCopier/pull/3))
+   - [ ] Copy outgoing transitions that goes from a State to a StateMachine.
+   - [ ] Copy selected transition that goes from a StateMachine to a State.
+   - [ ] Copy ingoing transitions that goes from a StateMachine to a State.
+   - [ ] Copy selected transitions that goes from a StateMachine to a StateMachine.
+   - [ ] Copy outgoing transitions that goes from a StateMachine to a StateMachine.
+   - [ ] Copy ingoing transitions that goes from a StateMachine to a StateMachine.
 
 ## Preview
 ### Copy selected transitions
