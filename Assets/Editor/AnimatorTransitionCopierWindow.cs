@@ -83,14 +83,12 @@ namespace PeDev {
 							return $"{srcState.name}->Exit State";
 						}
 
-						// If we have not destination state but have destination state machine
-						if (transition.destinationState == null &&
-							transition.destinationStateMachine != null)
-						{
+						// destination is a state machine.
+						if (transition.destinationStateMachine != null) {
 							return $"{srcState.name}->{transition.destinationStateMachine.name}";
 						}
 
-						// Normal.
+						// destination is a state.
 						return $"{srcState.name}->{transition.destinationState}";
 					case SourceStateType.AnyState:
 						return $"Any State->{transition.destinationState}";
@@ -309,8 +307,10 @@ namespace PeDev {
 		void CopyOutgoingTransitions(AnimatorState target, List<AnimatorStateTransitionInfo> copyTo) {
 			copyTo.Clear();
 			for (int i = 0; i < target.transitions.Length; i++) {
-				if (!target.transitions[i].isExit && !target.transitions[i].destinationState) {
-					// Don't handle state machine transition.
+				if (!target.transitions[i].isExit && 
+					!target.transitions[i].destinationState &&
+					!target.transitions[i].destinationStateMachine) {
+					// Unknown transition.
 					continue;
 				}
 				copyTo.Add(new AnimatorStateTransitionInfo() {
@@ -330,25 +330,21 @@ namespace PeDev {
 				} else {
 					if (m_IgnoreSelfTransitions) {
 						if (transitionInfo.transition.destinationState != null &&
-							transitionInfo.transition.destinationState.GetInstanceID() == target.GetInstanceID()) { 
+							transitionInfo.transition.destinationState.GetInstanceID() == target.GetInstanceID()) {
 							continue;
 						}
 					}
 
 					// If we have destination state we will make transition to that state
-					if (transitionInfo.transition.destinationState != null)
-					{
+					if (transitionInfo.transition.destinationState != null) {
 						target.AddTransition(CreateStateTransition(target, transitionInfo.transition.destinationState, transitionInfo.transition));
 					}
 					// Else if we have destination state machine we will make transition to it
-					else if (transitionInfo.transition.destinationStateMachine != null)
-					{
-						AnimatorStateTransition newTransition = target.AddTransition(transitionInfo.transition.destinationStateMachine);
-						CopyAnimatorStateTransition(transitionInfo.transition, newTransition);
+					else if (transitionInfo.transition.destinationStateMachine != null) {
+						target.AddTransition(CreateStateToStateMachineTransition(target, transitionInfo.transition.destinationStateMachine, transitionInfo.transition));
 					}
 					// Otherwise some unexpected error occurs
-					else
-					{
+					else {
 						Debug.LogError($"Null ref. Trying to make transition to destination that doesn't exist.");
 					}
 				}
@@ -474,6 +470,16 @@ namespace PeDev {
 			CopyAnimatorStateTransition(template, newTransition);
 			newTransition.isExit = false;
 			newTransition.destinationState = dstState;
+			return newTransition;
+		}
+
+		static AnimatorStateTransition CreateStateToStateMachineTransition(AnimatorState srcState, AnimatorStateMachine dstStateMachine, AnimatorStateTransition template) {
+			AnimatorStateTransition newTransition = CreateDefaultStateTransition(srcState);
+
+			CopyAnimatorStateTransition(template, newTransition);
+			newTransition.isExit = false;
+			newTransition.destinationState = null;
+			newTransition.destinationStateMachine = dstStateMachine;
 			return newTransition;
 		}
 
