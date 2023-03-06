@@ -78,6 +78,13 @@ namespace PeDev {
 					Debug.LogWarning($"Null ref. Trying to make transition to destination that doesn't exist.");
 				}
 			}
+
+			public void SetStateMachineTransitions(AnimatorTransition[] transitions) {
+				if (parent == null) {
+					return;
+				}
+				parent.SetStateMachineTransitions(stateMachine, transitions);
+			}
 		}
 
 		bool IsCurrentLayerValid => m_TargetAnimatorController != null && m_AnimatorLayerIndex < m_TargetAnimatorController.layers.Length;
@@ -535,12 +542,11 @@ namespace PeDev {
 			// StateMachine transitions.
 			foreach (var stateMachineInfo in m_AllStateMachinesInLayer) {
 				var stateMachineTransitions = stateMachineInfo.GetAllTransitionsFromStateMachine();
-				// Entry transitions
 				for (int i = 0; i < stateMachineTransitions.Length; i++) {
 					var transition = stateMachineTransitions[i];
 					if (transition.destinationState == target) {
 						copyTo.Add(new AnimatorStateTransitionInfo() {
-							sourceStateType = SourceType.EntryState,
+							sourceStateType = SourceType.StateMachine,
 							srcStateMachine = stateMachineInfo.stateMachine,
 							transition = transition,
 							orderInSrcTransitions = i
@@ -597,12 +603,11 @@ namespace PeDev {
 			// StateMachine transitions.
 			foreach (var stateMachineInfo in m_AllStateMachinesInLayer) {
 				var stateMachineTransitions = stateMachineInfo.GetAllTransitionsFromStateMachine();
-				// Entry transitions
 				for (int i = 0; i < stateMachineTransitions.Length; i++) {
 					var transition = stateMachineTransitions[i];
 					if (transition.destinationStateMachine == target) {
 						copyTo.Add(new AnimatorStateTransitionInfo() {
-							sourceStateType = SourceType.EntryState,
+							sourceStateType = SourceType.StateMachine,
 							srcStateMachine = stateMachineInfo.stateMachine,
 							transition = transition,
 							orderInSrcTransitions = i
@@ -664,7 +669,8 @@ namespace PeDev {
 						newStateMachineTransitions.Insert(transitionInfo.orderInSrcTransitions, CreateStateMachineTransition(transitionInfo.srcStateMachine, target, transitionInfo.transition));
 						// Record undo before replace transitions.
 						Undo.RegisterCompleteObjectUndo(transitionInfo.srcStateMachine, "Add new transitions");
-						transitionInfo.srcStateMachine.entryTransitions = newStateMachineTransitions.ToArray();
+						// Set its state machine outgoing transitions.
+						srcStateMachineInfo.SetStateMachineTransitions(newStateMachineTransitions.ToArray());
 					}
 					break;
 				}
@@ -723,7 +729,8 @@ namespace PeDev {
 						newStateMachineTransitions.Insert(transitionInfo.orderInSrcTransitions, CreateStateMachineTransition(transitionInfo.srcStateMachine, target, transitionInfo.transition));
 						// Record undo before replace transitions.
 						Undo.RegisterCompleteObjectUndo(transitionInfo.srcStateMachine, "Add new transitions");
-						transitionInfo.srcStateMachine.entryTransitions = newStateMachineTransitions.ToArray();
+						// Set its state machine outgoing transitions.
+						srcStateMachineInfo.SetStateMachineTransitions(newStateMachineTransitions.ToArray());
 					}
 					break;
 				}
