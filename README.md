@@ -51,7 +51,10 @@ It can help alleviate the frustration of having to manually redo all the animati
 ## Getting Started 
 ### Install via UPM git URL package.
 * [Install a package from a Git URL](https://docs.unity3d.com/Manual/upm-ui-giturl.html)
-* Git URL: `https://github.com/qwe321qwe321qwe321/Unity-AnimatorTransitionCopier.git?path=Assets/com.pedev.unity-animator-transition-copier`
+* Git URL:
+```
+https://github.com/qwe321qwe321qwe321/Unity-AnimatorTransitionCopier.git?path=Assets/com.pedev.unity-animator-transition-copier
+```
 
 or asset package availiable in [releases](https://github.com/qwe321qwe321qwe321/Unity-AnimatorTransitionCopier/releases).
 
