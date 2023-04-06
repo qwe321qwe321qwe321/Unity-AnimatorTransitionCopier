@@ -1,0 +1,19 @@
+{
+    "name": "com.pedev.unity-animator-transition-copier",
+    "displayName": "Animator Transition Copier @PeDev",
+    "version": "1.0.0",
+    "unity": "2019.4",
+    "description": "A simple tool to copy paste transitions in Animator editor.",
+    "dependencies": {},
+    "keywords": [
+      "animator",
+      "editor",
+      "tool"
+    ],
+    "license": "MIT",
+    "author": {
+      "name": "PeDev",
+      "email": "aegis321123@gmail.com",
+      "url": "https://github.com/qwe321qwe321qwe321/Unity-AnimatorTransitionCopier"
+    }
+  }
