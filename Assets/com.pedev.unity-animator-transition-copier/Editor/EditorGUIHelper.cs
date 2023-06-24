@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Created by PeDev 2020
  * https://github.com/qwe321qwe321qwe321/Unity-AnimatorTransitionCopier
  */
@@ -110,7 +110,7 @@ namespace PeDev {
 		/// </summary>
 		/// <param name="text"></param>
 		public static void LabelField(GUIContent text, FontStyle fontStyle = FontStyle.Normal) {
-			GUIStyle labelStyle = EditorStyles.label;
+			GUIStyle labelStyle = new GUIStyle(EditorStyles.label);
 			labelStyle.fontStyle = fontStyle;
 			EditorGUILayout.LabelField(text, labelStyle);
 		}
