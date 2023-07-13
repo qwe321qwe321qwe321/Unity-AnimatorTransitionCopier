@@ -56,7 +56,7 @@ It can help alleviate the frustration of having to manually redo all the animati
 https://github.com/qwe321qwe321qwe321/Unity-AnimatorTransitionCopier.git?path=Assets/com.pedev.unity-animator-transition-copier
 ```
 
-or asset package availiable in [releases](https://github.com/qwe321qwe321qwe321/Unity-AnimatorTransitionCopier/releases).
+or asset package available in [releases](https://github.com/qwe321qwe321qwe321/Unity-AnimatorTransitionCopier/releases).
 
 ### Open the tool in Unity.
 * It is in the menu `Custom\AnimationTools\AnimatorTransitionCopier`
